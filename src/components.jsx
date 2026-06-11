@@ -60,11 +60,6 @@ function savingsPct(retail, group) {
 function PhoneFrame({ children }) {
   return (
     <div className="phone">
-      <div className="statusbar">
-        <span>9:41</span>
-        <span>Promoxer</span>
-        <span className="device-status">5G&nbsp;&nbsp;▮</span>
-      </div>
       {children}
     </div>
   );
