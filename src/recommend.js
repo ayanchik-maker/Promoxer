@@ -1,6 +1,7 @@
 /* Promoxer — simple, explainable recommendation logic.
    Ranks products by interest/category match, budget fit, and city signal.
-   No real ML — transparent additive scoring suitable for a demo. */
+   No real ML — transparent additive scoring suitable for a demo.
+   Reasons are returned as i18n keys so the UI can localize them. */
 
 function scoreProduct(product, profile) {
   if (!profile) return { score: 0, reasons: [] };
@@ -11,7 +12,7 @@ function scoreProduct(product, profile) {
   const interests = profile.interests || [];
   if (interests.includes(product.category)) {
     score += 50;
-    reasons.push("Matches your interests");
+    reasons.push("reasonInterests");
   }
 
   // 2) Budget fit — the price a user actually pays is the group price.
@@ -19,7 +20,7 @@ function scoreProduct(product, profile) {
   if (budget > 0) {
     if (product.groupPrice <= budget) {
       score += 25;
-      reasons.push("Within your budget");
+      reasons.push("reasonBudget");
     } else if (product.groupPrice <= budget * 1.25) {
       score += 10; // just slightly over — still worth surfacing
     } else {
@@ -30,14 +31,14 @@ function scoreProduct(product, profile) {
   // 3) Trending / social proof bonus (helps cold-start when interests are sparse).
   if ((product.tags || []).includes("trending")) {
     score += 8;
-    reasons.push("Trending in " + (profile.city || "your city"));
+    reasons.push("reasonTrending");
   }
 
   // 4) Near-unlock nudge — almost-complete groups are more compelling.
   const progress = product.currentParticipants / product.minParticipants;
   if (progress >= 0.8) {
     score += 6;
-    reasons.push("Almost unlocked");
+    reasons.push("reasonAlmost");
   }
 
   return { score, reasons };

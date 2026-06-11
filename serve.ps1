@@ -2,6 +2,8 @@
 # Usage:  powershell -ExecutionPolicy Bypass -File serve.ps1   then open http://localhost:5173
 param([int]$Port = 5173)
 
+if ($env:PORT) { $Port = [int]$env:PORT }
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $types = @{
   ".html"="text/html; charset=utf-8"; ".css"="text/css; charset=utf-8";
@@ -10,40 +12,47 @@ $types = @{
   ".ico"="image/x-icon"; ".woff2"="font/woff2"
 }
 
-$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, $Port)
+# HttpListener: http.sys manages connections, so idle/speculative browser
+# connections can't deadlock the accept loop (unlike a raw TcpListener).
+$listener = New-Object System.Net.HttpListener
+$listener.Prefixes.Add("http://localhost:$Port/")
 $listener.Start()
 Write-Host "Promoxer running at http://localhost:$Port  (Ctrl+C to stop)"
 
-while ($true) {
-  $client = $listener.AcceptTcpClient()
+while ($listener.IsListening) {
   try {
-    $stream = $client.GetStream()
-    $reader = New-Object System.IO.StreamReader($stream)
-    $requestLine = $reader.ReadLine()
-    if (-not $requestLine) { $client.Close(); continue }
-    $parts = $requestLine.Split(' ')
-    $url = $parts[1]
-    $path = ($url -split '\?')[0]
-    if ($path -eq '/' ) { $path = '/index.html' }
+    $ctx = $listener.GetContext()
+    $req = $ctx.Request
+    $res = $ctx.Response
+
+    $path = $req.Url.AbsolutePath
+    if ($path -eq '/') { $path = '/index.html' }
     $path = [System.Uri]::UnescapeDataString($path)
     $file = Join-Path $root ($path.TrimStart('/') -replace '/', '\')
 
-    if (Test-Path $file -PathType Leaf) {
-      $bytes = [System.IO.File]::ReadAllBytes($file)
-      $ext = [System.IO.Path]::GetExtension($file).ToLower()
-      $ctype = if ($types.ContainsKey($ext)) { $types[$ext] } else { "application/octet-stream" }
-      $header = "HTTP/1.1 200 OK`r`nContent-Type: $ctype`r`nContent-Length: $($bytes.Length)`r`nAccess-Control-Allow-Origin: *`r`nConnection: close`r`n`r`n"
-      $hb = [System.Text.Encoding]::ASCII.GetBytes($header)
-      $stream.Write($hb, 0, $hb.Length)
-      $stream.Write($bytes, 0, $bytes.Length)
+    # Keep requests inside the project root.
+    $resolved = [System.IO.Path]::GetFullPath($file)
+    if (-not $resolved.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
+      $res.StatusCode = 403
+      $res.Close()
+      continue
+    }
+
+    if (Test-Path $resolved -PathType Leaf) {
+      $bytes = [System.IO.File]::ReadAllBytes($resolved)
+      $ext = [System.IO.Path]::GetExtension($resolved).ToLower()
+      $res.StatusCode = 200
+      $res.ContentType = if ($types.ContainsKey($ext)) { $types[$ext] } else { "application/octet-stream" }
+      $res.Headers.Add("Cache-Control", "no-store")
+      $res.ContentLength64 = $bytes.Length
+      $res.OutputStream.Write($bytes, 0, $bytes.Length)
     } else {
       $body = [System.Text.Encoding]::UTF8.GetBytes("404 Not Found: $path")
-      $header = "HTTP/1.1 404 Not Found`r`nContent-Type: text/plain`r`nContent-Length: $($body.Length)`r`nConnection: close`r`n`r`n"
-      $hb = [System.Text.Encoding]::ASCII.GetBytes($header)
-      $stream.Write($hb, 0, $hb.Length)
-      $stream.Write($body, 0, $body.Length)
+      $res.StatusCode = 404
+      $res.ContentType = "text/plain; charset=utf-8"
+      $res.ContentLength64 = $body.Length
+      $res.OutputStream.Write($body, 0, $body.Length)
     }
-    $stream.Flush()
+    $res.Close()
   } catch { }
-  finally { $client.Close() }
 }

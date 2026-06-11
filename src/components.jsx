@@ -4,6 +4,7 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 const DATA = window.PROMOXER_DATA;
 const RECO = window.PROMOXER_RECO;
+const I18N = window.PROMOXER_I18N;
 
 function Icon({ name, size = 20, className = "" }) {
   const common = {
@@ -27,6 +28,13 @@ function Icon({ name, size = 20, className = "" }) {
     close: <><path d="M6 6l12 12M18 6L6 18"/></>,
     share: <><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.3 10.8l7.4-4.5M8.3 13.2l7.4 4.5"/></>,
     spark: <><path d="M12 2l1.5 5.2L19 9l-5.5 1.8L12 16l-1.5-5.2L5 9l5.5-1.8L12 2z"/><path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z"/></>,
+    globe: <><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></>,
+    shield: <><path d="M12 3l7 3v5c0 4.5-3 8.4-7 10-4-1.6-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></>,
+    wallet: <><path d="M3 7a2 2 0 0 1 2-2h13v3"/><path d="M3 7v10a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14.5" r="1" fill="currentColor"/></>,
+    bank: <><path d="M3 9l9-5 9 5"/><path d="M4 9h16M5 9v8M9.5 9v8M14.5 9v8M19 9v8M3 17h18M2 20h20"/></>,
+    cardpay: <><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M6.5 15h4"/></>,
+    info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></>,
+    timer: <><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.6 2M9 2.5h6"/></>,
     phone: <><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></>,
     shoe: <><path d="M4 15c3.5-.2 5-2.2 6-6l3 3c1.5 1.5 3.5 2.3 6 2.5 1.4.2 1.8 3.5-.2 4H6c-2.2 0-3.2-1.2-2-3.5z"/><path d="M10 12l2 2M13 13l1.5 1.5"/></>,
     home: <><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5M9.5 20v-6h5v6"/></>,
@@ -58,6 +66,11 @@ function fmt(n) {
 }
 function savingsPct(retail, group) {
   return Math.round(((retail - group) / retail) * 100);
+}
+// Localize a recommendation-reason key produced by recommend.js.
+function reasonText(t, key, profile) {
+  if (key === "reasonTrending") return t(key, { city: t("city_" + ((profile && profile.city) || "Almaty")) });
+  return t(key);
 }
 
 // Centered phone shell with a status bar.
@@ -92,70 +105,83 @@ function ProgressBar({ current, min }) {
 }
 
 // SIM/eSIM verified badge — the identity layer made visible.
-function SimBadge({ id }) {
+function SimBadge({ id, t }) {
   return (
     <span className="sim-badge">
       <span className="dot" />
-      SIM/eSIM verified{id ? " · " + id : ""}
+      {t("simBadge")}{id ? " · " + id : ""}
     </span>
   );
 }
 
+// EN / RU language switch — the localization concept made tangible.
+function LangSwitch({ lang, onLang, compact }) {
+  return (
+    <div className={"langswitch" + (compact ? " compact" : "")} role="group" aria-label="Language">
+      {I18N.LANGS.map((l) => (
+        <button key={l} className={lang === l ? "active" : ""} onClick={() => onLang(l)}>
+          {l === "en" ? "EN" : "РУ"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Retail vs group price with savings pill.
-function PriceBenefit({ product, effectivePrice }) {
+function PriceBenefit({ product, t }) {
   const pct = savingsPct(product.retailPrice, product.groupPrice);
   return (
     <div className="row spread">
       <div className="row gap8">
         <span className="strike">{fmt(product.retailPrice)}</span>
-        <span className="price group">{fmt(effectivePrice != null ? effectivePrice : product.groupPrice)}</span>
+        <span className="price group">{fmt(product.groupPrice)}</span>
       </div>
-      <span className="save-pill">SAVE {pct}%</span>
+      <span className="save-pill">{t("savePct", { p: pct })}</span>
     </div>
   );
 }
 
 // A single product row in the feed.
-function ProductCard({ entry, joined, onOpen }) {
+function ProductCard({ entry, joined, onOpen, t, profile, payLabel }) {
   const product = entry.product || entry;
   const mkt = DATA.MARKETPLACES[product.marketplace];
   const topReason = entry.reasons && entry.reasons[0];
+  const done = product.currentParticipants >= product.minParticipants;
   return (
     <div className="card product" onClick={() => onOpen(product.id)}>
       <div className="thumb"><Icon name={product.image} size={46} /></div>
       <div className="info">
         <div className="row spread">
           <span className="mkt" style={{ background: mkt.color }}>{mkt.name}</span>
-          {joined && <span className="reason icon-label"><Icon name="check" size={11} /> Joined</span>}
+          {joined && <span className="reason icon-label"><Icon name="check" size={11} /> {t("joinedTag")}</span>}
         </div>
         <div className="pname mt8">{product.title}</div>
-        {topReason && <div className="mt8"><span className="reason">{topReason}</span></div>}
+        {topReason && <div className="mt8"><span className="reason">{reasonText(t, topReason, profile)}</span></div>}
         <div style={{ flex: 1 }} />
-        <PriceBenefit product={product} />
+        <PriceBenefit product={product} t={t} />
         <div className="mt8">
           <ProgressBar current={product.currentParticipants} min={product.minParticipants} />
           <div className="muted mt8">
-            {product.currentParticipants}/{product.minParticipants} joined ·{" "}
-            {product.currentParticipants >= product.minParticipants
-              ? "group price unlocked"
-              : (product.minParticipants - product.currentParticipants) + " more to unlock"}
+            {t("joinedOf", { c: product.currentParticipants, m: product.minParticipants })} ·{" "}
+            {done ? t("unlockShort") : t.c("more", product.minParticipants - product.currentParticipants)}
           </div>
+          {payLabel && <div className="pay-line"><Icon name="shield" size={11} /> {payLabel}</div>}
         </div>
       </div>
     </div>
   );
 }
 
-function OpportunityCard({ product, onOpen }) {
+function OpportunityCard({ product, onOpen, t }) {
   if (!product) return null;
   const remaining = Math.max(0, product.minParticipants - product.currentParticipants);
   return (
     <button className="opportunity" onClick={() => onOpen(product.id)}>
       <span className="opportunity-icon"><Icon name="spark" size={20} /></span>
       <span className="opportunity-copy">
-        <span className="opportunity-kicker">Closest to wholesale</span>
+        <span className="opportunity-kicker">{t("oppKicker")}</span>
         <strong>{product.title}</strong>
-        <span>{remaining === 0 ? "Price unlocked now" : `${remaining} ${remaining === 1 ? "buyer" : "buyers"} left`} · save {fmt(product.retailPrice - product.groupPrice)}</span>
+        <span>{remaining === 0 ? t("oppUnlocked") : t.c("oppLeft", remaining)} · {t("oppSave", { amt: fmt(product.retailPrice - product.groupPrice) })}</span>
       </span>
       <Icon name="arrow" size={18} />
     </button>
@@ -163,19 +189,19 @@ function OpportunityCard({ product, onOpen }) {
 }
 
 // Bottom tab navigation.
-function BottomNav({ tab, onTab, groupCount }) {
-  const tabs = [
-    { id: "feed", icon: "feed", label: "Feed" },
-    { id: "groups", icon: "groups", label: "My Groups" },
-    { id: "profile", icon: "user", label: "Profile" },
+function BottomNav({ tab, onTab, groupCount, t }) {
+  const items = [
+    { id: "feed", icon: "feed", label: t("navFeed") },
+    { id: "groups", icon: "groups", label: t("myGroups") },
+    { id: "profile", icon: "user", label: t("profileTitle") },
   ];
   return (
     <nav className="bottomnav">
-      {tabs.map((t) => (
-        <button key={t.id} className={"tab" + (tab === t.id ? " active" : "")} onClick={() => onTab(t.id)}>
-          <span className="ic"><Icon name={t.icon} size={17} /></span>
-          {t.label}
-          {t.id === "groups" && groupCount > 0 && <span className="badge-count">{groupCount}</span>}
+      {items.map((x) => (
+        <button key={x.id} className={"tab" + (tab === x.id ? " active" : "")} onClick={() => onTab(x.id)}>
+          <span className="ic"><Icon name={x.icon} size={17} /></span>
+          {x.label}
+          {x.id === "groups" && groupCount > 0 && <span className="badge-count">{groupCount}</span>}
         </button>
       ))}
     </nav>
@@ -186,4 +212,46 @@ function BottomNav({ tab, onTab, groupCount }) {
 function Toast({ text }) {
   if (!text) return null;
   return <div className="toast">{text}</div>;
+}
+
+// Bottom sheet with backdrop — used for payment and "how it works".
+function Sheet({ open, onClose, children }) {
+  if (!open) return null;
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-grip" />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Lightweight celebratory confetti burst (pure CSS animation).
+function Confetti({ burst }) {
+  if (!burst) return null;
+  const colors = ["#c5a46d", "#177245", "#0066cc", "#c7372f", "#171715"];
+  const pieces = Array.from({ length: 26 }, (_, i) => ({
+    left: (i * 37) % 100,
+    delay: (i % 7) * 0.09,
+    duration: 1.3 + ((i * 13) % 10) / 14,
+    color: colors[i % colors.length],
+    rotate: (i * 47) % 360,
+  }));
+  return (
+    <div className="confetti" key={burst} aria-hidden="true">
+      {pieces.map((c, i) => (
+        <span
+          key={i}
+          style={{
+            left: c.left + "%",
+            background: c.color,
+            animationDelay: c.delay + "s",
+            animationDuration: c.duration + "s",
+            transform: `rotate(${c.rotate}deg)`,
+          }}
+        />
+      ))}
+    </div>
+  );
 }

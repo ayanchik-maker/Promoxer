@@ -26,15 +26,22 @@ for the intended mobile look — the app renders inside a phone frame.)
 ## Demo walkthrough (the user journey)
 
 1. **SIM/eSIM verification** — tap *Verify with SIM/eSIM ID*; a secure device-linked ID is issued.
+   An **EN / РУ language switch** sits top-right (also in Profile) — the whole UI is localized.
 2. **Profile** — name, age, gender, city (localized to ₸ KZT), budget slider.
 3. **Interests** — pick categories; these drive the recommendation ranking.
 4. **Feed** — personalized, localized product cards aggregated from mock marketplaces
    (AliExpress, Amazon, Temu, eBay, SHEIN). Items matching your interests/budget rank first
-   and show a *“Matches your interests”* reason.
-5. **Product detail** — individual vs. group price, savings, group progress to the minimum batch.
-6. **Join group purchase** — joining advances the progress bar; when the minimum batch is
-   reached the **wholesale price unlocks** for everyone.
-7. **My Groups / Profile** — track joined groups, total savings, and your SIM/eSIM-verified profile.
+   and show a *“Matches your interests”* reason. Live activity simulation: other buyers
+   join open groups every few seconds, so progress bars move during the demo.
+5. **Product detail** — individual vs. group price, savings, the **source USD price
+   auto-converted to ₸** (1 USD = ₸512 mock rate), deal-window countdown, and group progress.
+6. **Join group purchase** — opens a **local payment sheet** (Kaspi Pay / Halyk Bank /
+   Visa-Mastercard) authorized via SIM/eSIM ID; the payment is *reserved*, charged only when
+   the batch completes. When the minimum batch is reached the **wholesale price unlocks**
+   for everyone — with confetti.
+7. **My Groups / Profile** — joined groups with their payment reservations, total savings,
+   your SIM/eSIM-verified profile, and a **“How Promoxer works”** sheet explaining the
+   mechanics plus the Level-2 SIM/eSIM strategic vision.
 
 State persists in `localStorage`. Use **Profile → Reset demo data** for a fresh walkthrough.
 
@@ -86,9 +93,10 @@ styles.css          mobile-first styling, phone frame, components
 serve.ps1           dependency-free static server (PowerShell)
 start.cmd           one-click launcher
 src/
-  data.js           cities, categories, marketplaces, ~16 mock products
-  recommend.js      scoreProduct() + recommendFeed() — explainable ranking
-  components.jsx     reusable UI (PhoneFrame, ProductCard, ProgressBar, SimBadge, …)
-  screens.jsx        SIM / Register / Interests / Feed / Detail / Groups / Profile
-  app.jsx            store, routing, localStorage persistence, mount
+  data.js           cities, categories, marketplaces, FX rate, payment rails, ~16 mock products
+  i18n.js           EN/RU dictionary with plural-aware t() — the localization layer
+  recommend.js      scoreProduct() + recommendFeed() — explainable ranking (i18n reason keys)
+  components.jsx     reusable UI (Icon set, ProductCard, Sheet, Confetti, LangSwitch, …)
+  screens.jsx        SIM / Register / Interests / Feed / Detail / Payment / Groups / Profile
+  app.jsx            store, routing, persistence, live group-activity simulation, mount
 ```
