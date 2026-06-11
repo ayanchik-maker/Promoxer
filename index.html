@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Promoxer — Collective Buying, Localized</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- React + Babel via CDN (no build step) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Plain JS data + logic (load first) -->
+  <script src="src/data.js"></script>
+  <script src="src/recommend.js"></script>
+
+  <!-- JSX (compiled in-browser by Babel) -->
+  <script type="text/babel" src="src/components.jsx"></script>
+  <script type="text/babel" src="src/screens.jsx"></script>
+  <script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
