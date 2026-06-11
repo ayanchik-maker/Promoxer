@@ -51,7 +51,7 @@ function App() {
   };
 
   const store = {
-    screen, tab, profile, products, joined, detailId,
+    screen, tab, profile, products, joined, detailId, flash,
 
     go: (s) => { setDetailId(null); setScreen(s); },
     setTab: (t) => { setDetailId(null); setTab(t); },

@@ -23,6 +23,10 @@ function Icon({ name, size = 20, className = "" }) {
     reset: <><path d="M5 8V4l-3 3 3 3V8a8 8 0 1 1-1 7"/><path d="M12 8v5l3 2"/></>,
     identity: <><rect x="4" y="6" width="16" height="13" rx="3"/><circle cx="9" cy="12" r="2"/><path d="M6.5 16c.5-1.5 1.3-2.2 2.5-2.2s2 .7 2.5 2.2M14 10h3M14 14h3"/><path d="M8 6V4h8v2"/></>,
     scan: <><path d="M8 3H4v4M16 3h4v4M8 21H4v-4M16 21h4v-4"/><path d="M8 12h8M10 9v6M14 9v6"/></>,
+    search: <><circle cx="11" cy="11" r="7"/><path d="M16.2 16.2L21 21"/></>,
+    close: <><path d="M6 6l12 12M18 6L6 18"/></>,
+    share: <><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.3 10.8l7.4-4.5M8.3 13.2l7.4 4.5"/></>,
+    spark: <><path d="M12 2l1.5 5.2L19 9l-5.5 1.8L12 16l-1.5-5.2L5 9l5.5-1.8L12 2z"/><path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7L19 15z"/></>,
     phone: <><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></>,
     shoe: <><path d="M4 15c3.5-.2 5-2.2 6-6l3 3c1.5 1.5 3.5 2.3 6 2.5 1.4.2 1.8 3.5-.2 4H6c-2.2 0-3.2-1.2-2-3.5z"/><path d="M10 12l2 2M13 13l1.5 1.5"/></>,
     home: <><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5M9.5 20v-6h5v6"/></>,
@@ -139,6 +143,22 @@ function ProductCard({ entry, joined, onOpen }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function OpportunityCard({ product, onOpen }) {
+  if (!product) return null;
+  const remaining = Math.max(0, product.minParticipants - product.currentParticipants);
+  return (
+    <button className="opportunity" onClick={() => onOpen(product.id)}>
+      <span className="opportunity-icon"><Icon name="spark" size={20} /></span>
+      <span className="opportunity-copy">
+        <span className="opportunity-kicker">Closest to wholesale</span>
+        <strong>{product.title}</strong>
+        <span>{remaining === 0 ? "Price unlocked now" : `${remaining} ${remaining === 1 ? "buyer" : "buyers"} left`} · save {fmt(product.retailPrice - product.groupPrice)}</span>
+      </span>
+      <Icon name="arrow" size={18} />
+    </button>
   );
 }
 

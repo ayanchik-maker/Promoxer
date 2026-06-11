@@ -132,10 +132,39 @@ function InterestsScreen({ store }) {
 // 4) Home feed ---------------------------------------------------------------
 function FeedScreen({ store }) {
   const [cat, setCat] = useState("all");
-  const feed = useMemo(
-    () => RECO.recommendFeed(store.products, store.profile, cat),
-    [store.products, store.profile, cat]
-  );
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("recommended");
+  const feed = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    const list = RECO.recommendFeed(store.products, store.profile, cat)
+      .filter((entry) => {
+        if (!normalized) return true;
+        const product = entry.product;
+        const marketplace = DATA.MARKETPLACES[product.marketplace].name;
+        return `${product.title} ${marketplace} ${(product.tags || []).join(" ")}`.toLowerCase().includes(normalized);
+      });
+    if (sort === "unlock") {
+      return [...list].sort((a, b) =>
+        (b.product.currentParticipants / b.product.minParticipants) -
+        (a.product.currentParticipants / a.product.minParticipants)
+      );
+    }
+    if (sort === "savings") {
+      return [...list].sort((a, b) =>
+        (b.product.retailPrice - b.product.groupPrice) -
+        (a.product.retailPrice - a.product.groupPrice)
+      );
+    }
+    return list;
+  }, [store.products, store.profile, cat, query, sort]);
+  const opportunity = useMemo(() => {
+    const active = store.products.filter((p) => !store.joined.includes(p.id));
+    return [...active].sort((a, b) => {
+      const aRemaining = Math.max(0, a.minParticipants - a.currentParticipants);
+      const bRemaining = Math.max(0, b.minParticipants - b.currentParticipants);
+      return aRemaining - bRemaining || (b.retailPrice - b.groupPrice) - (a.retailPrice - a.groupPrice);
+    })[0];
+  }, [store.products, store.joined]);
   const cats = [{ id: "all", label: "All", icon: "feed" }, ...DATA.CATEGORIES];
   return (
     <div className="screen">
@@ -148,6 +177,16 @@ function FeedScreen({ store }) {
           <span className="header-mark">P</span>
         </div>
         <p className="sub mt8">Personalized group deals from global marketplaces.</p>
+        <div className="searchbox mt16">
+          <Icon name="search" size={17} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search products or marketplaces"
+            aria-label="Search products"
+          />
+          {query && <button onClick={() => setQuery("")} aria-label="Clear search"><Icon name="close" size={15} /></button>}
+        </div>
       </div>
 
       <div className="catbar">
@@ -159,7 +198,25 @@ function FeedScreen({ store }) {
       </div>
 
       <div className="pad" style={{ paddingTop: 4 }}>
-        {feed.length === 0 && <div className="empty"><div className="ic">—</div><p>No products in this category yet.</p></div>}
+        {!query && cat === "all" && <OpportunityCard product={opportunity} onOpen={store.openDetail} />}
+        <div className="feed-toolbar">
+          <span>{feed.length} {feed.length === 1 ? "deal" : "deals"}</span>
+          <label>
+            <span className="sr-only">Sort deals</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="recommended">Recommended</option>
+              <option value="unlock">Closest to unlock</option>
+              <option value="savings">Biggest savings</option>
+            </select>
+          </label>
+        </div>
+        {feed.length === 0 && (
+          <div className="empty">
+            <div className="ic"><Icon name="search" size={38} /></div>
+            <p>No matching deals.</p>
+            <button className="text-action" onClick={() => { setQuery(""); setCat("all"); }}>Clear search and filters</button>
+          </div>
+        )}
         {feed.map((entry) => (
           <ProductCard
             key={entry.product.id}
@@ -183,10 +240,30 @@ function DetailScreen({ store }) {
   const remaining = Math.max(0, product.minParticipants - product.currentParticipants);
   const reasons = RECO.scoreProduct(product, store.profile).reasons;
   const effective = unlocked ? product.groupPrice : product.retailPrice;
+  const shareProduct = async () => {
+    const text = `Join my Promoxer group for ${product.title} and save ${fmt(product.retailPrice - product.groupPrice)}.`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.title, text, url: window.location.href });
+        store.flash("Deal shared");
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(`${text} ${window.location.href}`);
+        store.flash("Deal link copied");
+      } else {
+        store.flash("Share this deal with your group");
+      }
+    } catch (error) {
+      if (error && error.name !== "AbortError") store.flash("Couldn’t share this deal");
+    }
+  };
 
   return (
     <div className="screen">
-      <AppBar title="" onBack={store.closeDetail} />
+      <AppBar
+        title=""
+        onBack={store.closeDetail}
+        right={<button className="back" onClick={shareProduct} aria-label="Share deal"><Icon name="share" size={17} /></button>}
+      />
       <div className="pad" style={{ paddingTop: 0 }}>
         <div className="card center" style={{ padding: 28 }}>
           <div className="detail-product-icon"><Icon name={product.image} size={92} /></div>
