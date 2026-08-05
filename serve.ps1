@@ -38,6 +38,11 @@ while ($listener.IsListening) {
       continue
     }
 
+    # Directory requests (e.g. /atmos/) fall through to that folder's index.html.
+    if (Test-Path $resolved -PathType Container) {
+      $resolved = Join-Path $resolved 'index.html'
+    }
+
     if (Test-Path $resolved -PathType Leaf) {
       $bytes = [System.IO.File]::ReadAllBytes($resolved)
       $ext = [System.IO.Path]::GetExtension($resolved).ToLower()

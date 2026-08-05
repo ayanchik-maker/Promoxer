@@ -1,0 +1,73 @@
+/* Atmos — styling that can't live in inline styles (keyframes, pseudo-elements,
+   :active states). Everything else is inline, mirroring the design source. */
+
+body {
+  margin: 0;
+  background: oklch(93% 0.004 265);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  display: flex;
+  justify-content: center;
+}
+
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+input, button { font-family: inherit; }
+input:focus { outline: none; border-color: oklch(58% 0.16 265); }
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid oklch(58% 0.16 265);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid oklch(58% 0.16 265);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Press feedback — the design expresses these as style-active rules. */
+.press-97:active { transform: scale(0.97); }
+.press-90:active { transform: scale(0.90); }
+.press-88:active { transform: scale(0.88); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0.6); } 70% { transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes pulseGlow { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes dash { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes tabPop { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* Below the phone's own width there is no point letterboxing the bezel. */
+@media (max-width: 460px) {
+  body { background: oklch(97.5% 0.003 265); }
+  .atmos-device {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+}
